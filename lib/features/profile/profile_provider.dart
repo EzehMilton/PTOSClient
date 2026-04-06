@@ -19,6 +19,13 @@ class ProfileProvider extends ChangeNotifier {
   // Convenience getters
   String get fullName => _profile['fullName'] as String? ?? '';
   String get email => _profile['email'] as String? ?? '';
+  String? get ptName => _readString(const [
+        'ptName',
+        'trainerName',
+        'personalTrainerName',
+        'coachName',
+        'inviterName',
+      ]);
 
   String get initials {
     final parts = fullName.trim().split(RegExp(r'\s+'));
@@ -67,9 +74,25 @@ class ProfileProvider extends ChangeNotifier {
     }
   }
 
+  Future<bool> completeOnboarding() {
+    return saveProfile({
+      'onboardingComplete': true,
+    });
+  }
+
   String? _extractMessage(DioException e) {
     if (e.response?.data is Map) {
       return (e.response!.data as Map)['message'] as String?;
+    }
+    return null;
+  }
+
+  String? _readString(List<String> keys) {
+    for (final key in keys) {
+      final value = _profile[key];
+      if (value is String && value.trim().isNotEmpty) {
+        return value.trim();
+      }
     }
     return null;
   }

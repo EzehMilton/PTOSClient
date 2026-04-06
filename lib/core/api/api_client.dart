@@ -1,7 +1,10 @@
+import 'package:http_parser/http_parser.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
 import '../constants.dart';
+import '../models/public_invite.dart';
 import '../storage/token_storage.dart';
 
 class ApiClient {
@@ -38,6 +41,57 @@ class ApiClient {
 
   late final Dio _dio;
   Dio get dio => _dio;
+
+  Future<PublicInvite> getPublicInvite(String token) async {
+    final response = await _dio.get(
+      '/api/public/invites/${Uri.encodeComponent(token)}',
+    );
+    final data = response.data as Map<String, dynamic>;
+    return PublicInvite.fromJson(data, fallbackToken: token);
+  }
+
+  Future<void> uploadProfilePhotos({
+    XFile? frontPhoto,
+    XFile? sidePhoto,
+    XFile? backPhoto,
+  }) async {
+    Future<MultipartFile> multipartFromXFile(
+      XFile file,
+      String filenamePrefix,
+    ) async {
+      final bytes = await file.readAsBytes();
+      final ext = file.name.split('.').last.toLowerCase();
+      final mime = ext == 'png'
+          ? MediaType('image', 'png')
+          : MediaType('image', 'jpeg');
+
+      return MultipartFile.fromBytes(
+        bytes,
+        filename: '$filenamePrefix.$ext',
+        contentType: mime,
+      );
+    }
+
+    final formData = FormData();
+
+    if (frontPhoto != null) {
+      formData.files.add(
+        MapEntry('photoFront', await multipartFromXFile(frontPhoto, 'front')),
+      );
+    }
+    if (sidePhoto != null) {
+      formData.files.add(
+        MapEntry('photoSide', await multipartFromXFile(sidePhoto, 'side')),
+      );
+    }
+    if (backPhoto != null) {
+      formData.files.add(
+        MapEntry('photoBack', await multipartFromXFile(backPhoto, 'back')),
+      );
+    }
+
+    await _dio.post('/api/client/profile/photos', data: formData);
+  }
 
   GlobalKey<NavigatorState>? _navigatorKey;
 

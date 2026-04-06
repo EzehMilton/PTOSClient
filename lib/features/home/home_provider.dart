@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../core/api/api_client.dart';
+import '../../core/models/client_goal.dart';
 
 class HomeProvider extends ChangeNotifier {
   bool _loading = false;
@@ -23,14 +24,7 @@ class HomeProvider extends ChangeNotifier {
   String _goal = '';
   String get goal => _goal;
 
-  String get goalFormatted {
-    return _goal
-        .replaceAll('_', ' ')
-        .split(' ')
-        .map((w) =>
-            w.isEmpty ? w : '${w[0].toUpperCase()}${w.substring(1).toLowerCase()}')
-        .join(' ');
-  }
+  String get goalFormatted => clientGoalLabel(_goal);
 
   Future<void> loadProfile() async {
     _loading = true;
@@ -43,9 +37,15 @@ class HomeProvider extends ChangeNotifier {
       final data = response.data as Map<String, dynamic>;
 
       _fullName = data['fullName'] as String? ?? '';
-      _currentWeight = (data['currentWeight'] as num?)?.toDouble() ?? 0;
-      _targetWeight = (data['targetWeight'] as num?)?.toDouble() ?? 0;
-      _goal = data['goal'] as String? ?? '';
+      _currentWeight =
+          _readPositiveDouble(data, const ['currentWeight', 'currentWeightKg']) ??
+              _readDouble(data, const ['currentWeight', 'currentWeightKg']) ??
+              0;
+      _targetWeight =
+          _readPositiveDouble(data, const ['targetWeight', 'targetWeightKg']) ??
+              _readDouble(data, const ['targetWeight', 'targetWeightKg']) ??
+              0;
+      _goal = _readString(data, const ['goalType', 'goal']) ?? '';
 
       _loading = false;
       notifyListeners();
@@ -57,5 +57,35 @@ class HomeProvider extends ChangeNotifier {
       _loading = false;
       notifyListeners();
     }
+  }
+
+  double? _readDouble(Map<String, dynamic> data, List<String> keys) {
+    for (final key in keys) {
+      final value = data[key];
+      if (value is num) {
+        return value.toDouble();
+      }
+    }
+    return null;
+  }
+
+  double? _readPositiveDouble(Map<String, dynamic> data, List<String> keys) {
+    for (final key in keys) {
+      final value = data[key];
+      if (value is num && value.toDouble() > 0) {
+        return value.toDouble();
+      }
+    }
+    return null;
+  }
+
+  String? _readString(Map<String, dynamic> data, List<String> keys) {
+    for (final key in keys) {
+      final value = data[key];
+      if (value is String && value.trim().isNotEmpty) {
+        return value.trim();
+      }
+    }
+    return null;
   }
 }
