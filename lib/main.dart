@@ -6,6 +6,7 @@ import 'core/api/api_client.dart';
 import 'core/constants.dart';
 import 'core/storage/token_storage.dart';
 import 'features/auth/auth_provider.dart';
+import 'features/auth/create_account_screen.dart';
 import 'features/auth/login_screen.dart';
 import 'features/checkin/checkin_confirmation_screen.dart';
 import 'features/checkin/checkin_detail_screen.dart';
@@ -14,10 +15,17 @@ import 'features/checkin/checkin_history_screen.dart';
 import 'features/checkin/checkin_provider.dart';
 import 'features/home/home_provider.dart';
 import 'features/home/home_screen.dart';
+import 'features/invite/invite_landing_screen.dart';
 import 'features/meal_plan/meal_plan_provider.dart';
 import 'features/meal_plan/meal_plan_screen.dart';
 import 'features/messages/messages_provider.dart';
 import 'features/messages/messages_screen.dart';
+import 'features/onboarding/basic_info_screen.dart';
+import 'features/onboarding/connect_health_data_screen.dart';
+import 'features/onboarding/experience_and_health_screen.dart';
+import 'features/onboarding/goals_screen.dart';
+import 'features/onboarding/progress_photos_screen.dart';
+import 'features/onboarding/setup_complete_screen.dart';
 import 'features/profile/profile_provider.dart';
 import 'features/profile/profile_screen.dart';
 import 'features/workout/workout_provider.dart';
@@ -48,8 +56,45 @@ class _SetlyAppState extends State<SetlyApp> {
   void initState() {
     super.initState();
     _router = GoRouter(
-      initialLocation: widget.isLoggedIn ? Routes.home : Routes.login,
+      initialLocation:
+          widget.isLoggedIn ? Routes.home : Routes.inviteLanding,
       routes: [
+        GoRoute(
+          path: Routes.inviteLanding,
+          builder: (context, state) => InviteLandingScreen(
+            initialToken: state.uri.queryParameters['token'],
+          ),
+        ),
+        GoRoute(
+          path: Routes.createAccount,
+          builder: (context, state) => CreateAccountScreen(
+            inviteToken: state.uri.queryParameters['token'],
+          ),
+        ),
+        GoRoute(
+          path: Routes.basicInfo,
+          builder: (context, state) => const BasicInfoScreen(),
+        ),
+        GoRoute(
+          path: Routes.goals,
+          builder: (context, state) => const GoalsScreen(),
+        ),
+        GoRoute(
+          path: Routes.experienceAndHealth,
+          builder: (context, state) => const ExperienceAndHealthScreen(),
+        ),
+        GoRoute(
+          path: Routes.progressPhotos,
+          builder: (context, state) => const ProgressPhotosScreen(),
+        ),
+        GoRoute(
+          path: Routes.connectHealthData,
+          builder: (context, state) => const ConnectHealthDataScreen(),
+        ),
+        GoRoute(
+          path: Routes.setupComplete,
+          builder: (context, state) => const SetupCompleteScreen(),
+        ),
         GoRoute(
           path: Routes.login,
           builder: (context, state) => const LoginScreen(),

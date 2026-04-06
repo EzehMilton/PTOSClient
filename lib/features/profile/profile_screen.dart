@@ -3,29 +3,11 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/constants.dart';
+import '../../core/models/client_goal.dart';
+import '../../core/models/client_training_experience.dart';
 import 'profile_provider.dart';
 
 // ---- Label helpers --------------------------------------------------------
-
-const _goalOptions = {
-  'WEIGHT_LOSS': 'Weight Loss',
-  'MUSCLE_GAIN': 'Muscle Gain',
-  'STRENGTH': 'Strength',
-  'ENDURANCE': 'Endurance',
-  'GENERAL_FITNESS': 'General Fitness',
-};
-
-const _experienceOptions = {
-  'BEGINNER': 'Beginner',
-  'INTERMEDIATE': 'Intermediate',
-  'ADVANCED': 'Advanced',
-};
-
-String _goalLabel(String? raw) =>
-    _goalOptions[raw?.toUpperCase()] ?? raw ?? '-';
-
-String _experienceLabel(String? raw) =>
-    _experienceOptions[raw?.toUpperCase()] ?? raw ?? '-';
 
 // ---------------------------------------------------------------------------
 // Screen
@@ -73,15 +55,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _enterEdit() {
     final p = context.read<ProfileProvider>().profile;
     _ageCtr.text = '${p['age'] ?? ''}';
-    _heightCtr.text = '${p['height'] ?? ''}';
-    _weightCtr.text = '${p['currentWeight'] ?? ''}';
-    _targetWeightCtr.text = '${p['targetWeight'] ?? ''}';
-    _injuriesCtr.text = p['injuries'] as String? ?? '';
+    _heightCtr.text = '${_firstValue(p, const ['height', 'heightCm']) ?? ''}';
+    _weightCtr.text =
+        '${_firstValue(p, const ['currentWeight', 'currentWeightKg']) ?? ''}';
+    _targetWeightCtr.text =
+        '${_firstValue(p, const ['targetWeight', 'targetWeightKg']) ?? ''}';
+    _injuriesCtr.text =
+        (p['injuriesOrConditions'] ?? p['injuries']) as String? ?? '';
     _dietaryCtr.text = p['dietaryPreferences'] as String? ?? '';
-    _notesCtr.text = p['notes'] as String? ?? '';
+    _notesCtr.text = (p['additionalNotes'] ?? p['notes']) as String? ?? '';
     _goalType = (p['goalType'] as String?)?.toUpperCase();
     _experience = (p['trainingExperience'] as String?)?.toUpperCase();
     setState(() => _editing = true);
+  }
+
+  Object? _firstValue(Map<String, dynamic> data, List<String> keys) {
+    for (final key in keys) {
+      final value = data[key];
+      if (value != null && value.toString().trim().isNotEmpty) {
+        return value;
+      }
+    }
+    return null;
   }
 
   void _cancelEdit() {
@@ -97,9 +92,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       'targetWeight': double.tryParse(_targetWeightCtr.text.trim()),
       'goalType': _goalType,
       'trainingExperience': _experience,
-      'injuries': _injuriesCtr.text.trim(),
+      'injuriesOrConditions': _injuriesCtr.text.trim(),
       'dietaryPreferences': _dietaryCtr.text.trim(),
-      'notes': _notesCtr.text.trim(),
+      'additionalNotes': _notesCtr.text.trim(),
     };
 
     final ok = await provider.saveProfile(updates);
@@ -220,19 +215,54 @@ class _DisplayBody extends StatelessWidget {
             child: Column(
               children: [
                 _ReadRow('Age', _fmt(profile['age'])),
-                _ReadRow('Height', _fmtUnit(profile['height'], 'cm')),
                 _ReadRow(
-                    'Current Weight', _fmtUnit(profile['currentWeight'], 'kg')),
-                _ReadRow('Goal', _goalLabel(profile['goalType'] as String?)),
+                  'Height',
+                  _fmtUnit(
+                    _firstValue(profile, const ['height', 'heightCm']),
+                    'cm',
+                  ),
+                ),
                 _ReadRow(
-                    'Target Weight', _fmtUnit(profile['targetWeight'], 'kg')),
+                  'Current Weight',
+                  _fmtUnit(
+                    _firstValue(
+                      profile,
+                      const ['currentWeight', 'currentWeightKg'],
+                    ),
+                    'kg',
+                  ),
+                ),
+                _ReadRow(
+                  'Goal',
+                  clientGoalLabel(
+                    _firstValue(profile, const ['goalType', 'goal']) as String?,
+                  ),
+                ),
+                _ReadRow(
+                  'Target Weight',
+                  _fmtUnit(
+                    _firstValue(
+                      profile,
+                      const ['targetWeight', 'targetWeightKg'],
+                    ),
+                    'kg',
+                  ),
+                ),
                 _ReadRow('Experience',
-                    _experienceLabel(profile['trainingExperience'] as String?)),
+                    clientTrainingExperienceLabel(
+                      profile['trainingExperience'] as String?,
+                    )),
                 _ReadRow(
-                    'Injuries / Conditions', profile['injuries'] as String?),
+                    'Injuries / Conditions',
+                    (profile['injuriesOrConditions'] ?? profile['injuries'])
+                        as String?),
                 _ReadRow(
                     'Dietary Preferences', profile['dietaryPreferences'] as String?),
-                _ReadRow('Notes', profile['notes'] as String?, last: true),
+                _ReadRow(
+                  'Notes',
+                  (profile['additionalNotes'] ?? profile['notes']) as String?,
+                  last: true,
+                ),
               ],
             ),
           ),
@@ -249,6 +279,16 @@ class _DisplayBody extends StatelessWidget {
   }
 
   String _fmt(dynamic v) => v?.toString() ?? '-';
+
+  Object? _firstValue(Map<String, dynamic> data, List<String> keys) {
+    for (final key in keys) {
+      final value = data[key];
+      if (value != null && value.toString().trim().isNotEmpty) {
+        return value;
+      }
+    }
+    return null;
+  }
 
   String _fmtUnit(dynamic v, String unit) {
     if (v == null) return '-';
@@ -418,11 +458,16 @@ class _EditBody extends StatelessWidget {
           const _FieldLabel('Goal'),
           const SizedBox(height: 6),
           DropdownButtonFormField<String>(
-            value: _goalOptions.containsKey(goalType) ? goalType : null,
+            value: clientGoalFromBackend(goalType) == null ? null : goalType,
             decoration: const InputDecoration(border: OutlineInputBorder()),
             dropdownColor: const Color(0xFF1E1F2E),
-            items: _goalOptions.entries
-                .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
+            items: ClientGoal.values
+                .map(
+                  (goal) => DropdownMenuItem(
+                    value: goal.backendValue,
+                    child: Text(goal.label),
+                  ),
+                )
                 .toList(),
             onChanged: onGoalChanged,
           ),
@@ -437,11 +482,18 @@ class _EditBody extends StatelessWidget {
           const _FieldLabel('Experience Level'),
           const SizedBox(height: 6),
           DropdownButtonFormField<String>(
-            value: _experienceOptions.containsKey(experience) ? experience : null,
+            value: clientTrainingExperienceFromBackend(experience) == null
+                ? null
+                : experience,
             decoration: const InputDecoration(border: OutlineInputBorder()),
             dropdownColor: const Color(0xFF1E1F2E),
-            items: _experienceOptions.entries
-                .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
+            items: ClientTrainingExperience.values
+                .map(
+                  (value) => DropdownMenuItem(
+                    value: value.backendValue,
+                    child: Text(value.label),
+                  ),
+                )
                 .toList(),
             onChanged: onExperienceChanged,
           ),
