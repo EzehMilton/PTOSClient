@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/constants.dart';
+import '../messages/messages_provider.dart';
 import '../../core/storage/token_storage.dart';
 import 'home_provider.dart';
 
@@ -20,6 +21,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     context.read<HomeProvider>().loadProfile();
+    context.read<MessagesProvider>().loadMessages();
   }
 
   String _greeting() {
@@ -146,6 +148,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     _ActionCard(
                       icon: Icons.chat_bubble_outline,
                       label: 'Messages',
+                      badgeCount:
+                          context.watch<MessagesProvider>().unreadCount,
                       onTap: () => context.go(Routes.messages),
                     ),
                   ],
@@ -179,14 +183,15 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: const Color(0xFF171826),
         selectedItemColor: purple,
         unselectedItemColor: Colors.white54,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(
+        items: [
+          const BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          const BottomNavigationBarItem(
               icon: Icon(Icons.fact_check), label: 'Check-in'),
-          BottomNavigationBarItem(
+          const BottomNavigationBarItem(
               icon: Icon(Icons.fitness_center), label: 'Workout'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.chat_bubble_outline), label: 'Messages'),
+              icon: _MessagesNavIcon(),
+              label: 'Messages'),
         ],
       ),
     );
@@ -282,16 +287,16 @@ class _ActionCard extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.onTap,
+    this.badgeCount = 0,
   });
 
   final IconData icon;
   final String label;
   final VoidCallback onTap;
+  final int badgeCount;
 
   @override
   Widget build(BuildContext context) {
-    const purple = Color(0xFF7B5CF6);
-
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -303,7 +308,7 @@ class _ActionCard extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: purple, size: 32),
+            _IconBadge(icon: icon, badgeCount: badgeCount, iconSize: 32),
             const SizedBox(height: 10),
             Text(
               label,
@@ -313,6 +318,68 @@ class _ActionCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _MessagesNavIcon extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final unreadCount = context.select<MessagesProvider, int>(
+      (provider) => provider.unreadCount,
+    );
+    return _IconBadge(
+      icon: Icons.chat_bubble_outline,
+      badgeCount: unreadCount,
+      iconSize: 24,
+    );
+  }
+}
+
+class _IconBadge extends StatelessWidget {
+  const _IconBadge({
+    required this.icon,
+    required this.badgeCount,
+    required this.iconSize,
+  });
+
+  final IconData icon;
+  final int badgeCount;
+  final double iconSize;
+
+  @override
+  Widget build(BuildContext context) {
+    const purple = Color(0xFF7B5CF6);
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Icon(icon, color: purple, size: iconSize),
+        if (badgeCount > 0)
+          Positioned(
+            right: -10,
+            top: -8,
+            child: Container(
+              constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+              decoration: const BoxDecoration(
+                color: Colors.redAccent,
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Text(
+                  badgeCount > 99 ? '99+' : '$badgeCount',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

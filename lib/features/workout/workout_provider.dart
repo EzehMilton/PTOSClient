@@ -6,6 +6,10 @@ import '../../core/api/api_client.dart';
 class WorkoutProvider extends ChangeNotifier {
   List<Map<String, dynamic>> _workouts = [];
 
+  String _workoutId(Map<String, dynamic> workout) {
+    return '${workout['assignmentId'] ?? workout['id'] ?? workout['_id'] ?? ''}';
+  }
+
   Map<String, dynamic>? get currentWorkout {
     for (final w in _workouts) {
       final s = (w['status'] as String? ?? '').toUpperCase();
@@ -16,9 +20,9 @@ class WorkoutProvider extends ChangeNotifier {
 
   List<Map<String, dynamic>> get previousWorkouts {
     final current = currentWorkout;
-    final currentId = current?['id'] ?? current?['_id'];
+    final currentId = current == null ? null : _workoutId(current);
     return _workouts.where((w) {
-      final id = w['id'] ?? w['_id'];
+      final id = _workoutId(w);
       return id != currentId || currentId == null;
     }).toList();
   }
@@ -63,7 +67,7 @@ class WorkoutProvider extends ChangeNotifier {
 
       // Update local state so the UI reflects the change immediately.
       for (final w in _workouts) {
-        final wId = '${w['id'] ?? w['_id'] ?? ''}';
+        final wId = _workoutId(w);
         if (wId == id) {
           w['status'] = status;
           break;

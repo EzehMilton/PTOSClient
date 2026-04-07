@@ -7,6 +7,9 @@ class MessagesProvider extends ChangeNotifier {
   List<Map<String, dynamic>> _messages = [];
   List<Map<String, dynamic>> get messages => _messages;
 
+  int get unreadCount =>
+      _messages.where((message) => _isIncomingUnread(message)).length;
+
   bool _loading = false;
   bool get loading => _loading;
 
@@ -61,6 +64,40 @@ class MessagesProvider extends ChangeNotifier {
   String? _extractMessage(DioException e) {
     if (e.response?.data is Map) {
       return (e.response!.data as Map)['message'] as String?;
+    }
+    return null;
+  }
+
+  bool _isIncomingUnread(Map<String, dynamic> message) {
+    final senderRole = (message['senderRole'] as String? ?? '').toUpperCase();
+    if (senderRole == 'CLIENT') return false;
+
+    final bool? read = _readBool(message, const [
+      'isRead',
+      'read',
+      'isSeen',
+      'seen',
+      'viewed',
+      'isViewed',
+    ]);
+    if (read != null) return !read;
+
+    final readAt = message['readAt'] ?? message['seenAt'] ?? message['viewedAt'];
+    if (readAt is String && readAt.trim().isNotEmpty) return false;
+
+    // If the backend does not expose unread state, do not show a misleading badge.
+    return false;
+  }
+
+  bool? _readBool(Map<String, dynamic> data, List<String> keys) {
+    for (final key in keys) {
+      final value = data[key];
+      if (value is bool) return value;
+      if (value is String) {
+        final normalized = value.trim().toLowerCase();
+        if (normalized == 'true') return true;
+        if (normalized == 'false') return false;
+      }
     }
     return null;
   }

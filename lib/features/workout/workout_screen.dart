@@ -6,6 +6,10 @@ import 'package:provider/provider.dart';
 import '../../core/constants.dart';
 import 'workout_provider.dart';
 
+String _workoutId(Map<String, dynamic> workout) {
+  return '${workout['assignmentId'] ?? workout['id'] ?? workout['_id'] ?? ''}';
+}
+
 class WorkoutScreen extends StatefulWidget {
   const WorkoutScreen({super.key});
 
@@ -136,7 +140,7 @@ class _CurrentWorkoutSection extends StatelessWidget {
         '';
     final status = (workout['status'] as String? ?? '').toUpperCase();
     final exercises = workout['exercises'] as List<dynamic>? ?? [];
-    final id = '${workout['id'] ?? workout['_id'] ?? ''}';
+    final id = _workoutId(workout);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
